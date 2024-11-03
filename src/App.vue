@@ -176,9 +176,9 @@ const isMobileMenuOpen = ref(false)
 
 const navigation = [
   { name: 'Analyze', href: '/' },
-  { name: 'Reports', href: '/reports' },
   { name: 'How It Works', href: '/how-it-works' },
-  { name: 'FAQs', href: '/faqs' }
+  { name: 'FAQs', href: '/faqs' },
+  { name: 'Reports', href: '/reports' },
 ]
 
 const shortAddress = computed(() => {

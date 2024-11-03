@@ -5,7 +5,7 @@ export function useLLM() {
   const isLoading = ref(false)
   const error = ref(null)
 
-  const API_URL = 'https://llama.us.gaianet.network/v1/chat/completions'
+  const API_URL = 'https://codestral.us.gaianet.network/v1/chat/completions'
 
   const axiosInstance = axios.create({
     baseURL: API_URL,
@@ -20,6 +20,21 @@ export function useLLM() {
   function extractKeyPoints(text) {
     console.log('Raw LLM Response:', text)
     
+    if (text.trim().toLowerCase() === 'no issues found.') {
+      return {
+        issues: [{
+          severity: 'low',
+          title: 'No Security Issues',
+          description: 'Code analysis found no significant security vulnerabilities.'
+        }],
+        suggestions: [{
+          title: 'General Recommendation',
+          description: 'While no issues were found, consider regular security reviews and testing.'
+        }],
+        riskScore: 10
+      }
+    }
+
     const lines = text.split(/[\n•-]/).filter(line => line.trim())
     const issues = []
     const suggestions = []
@@ -73,23 +88,29 @@ export function useLLM() {
       return {
         issues: [{
           severity: 'low',
-          title: 'No Security Issues',
+          title: 'No Security Issues Found',
           description: 'Code analysis found no significant security vulnerabilities.'
         }],
         suggestions: suggestions.length ? suggestions : [{
           title: 'General Recommendation',
           description: 'While no issues were found, consider regular security reviews and testing.'
         }],
-        riskScore: 10 // Low risk score for no issues
+        riskScore: 10  // Set to 10% for no issues
       }
     }
-
+    
+    // Also in the main return statement of extractKeyPoints (around line 100-105), update the riskScore calculation:
     return { 
-      issues, 
-      suggestions,
-      riskScore: maxSeverityScore || (issues.some(i => i.severity === 'critical') ? 90 :
-                                     issues.some(i => i.severity === 'high') ? 70 :
-                                     issues.some(i => i.severity === 'medium') ? 50 : 30)
+      issues: issues.length ? issues : [{
+        severity: 'low',
+        title: 'No Security Issues',
+        description: 'Code analysis found no significant security vulnerabilities.'
+      }],
+      suggestions: suggestions.length ? suggestions : [{
+        title: 'General Recommendation',
+        description: 'While no issues were found, consider regular security reviews and testing.'
+      }],
+      riskScore: issues.length ? maxSeverityScore : 10
     }
   }
 
@@ -107,18 +128,14 @@ export function useLLM() {
         messages: [
           {
             role: "system",
-            content: `You are a smart contract security auditor. **Analyze the submitted contract and strictly identify all security vulnerabilities directly, without explaining the contract's general functionality.** For each issue found, follow this exact structure:
+            content: `You are a highly specialized smart contract security auditor. Your task is to perform an in-depth security analysis of the submitted smart contract code. Do not describe the code’s functionality or suggest general improvements—focus solely on identifying and explaining security vulnerabilities. For each security issue found, follow this precise format:
 
-- **Severity Level:** Label the severity as Critical, High, Medium, or Low.
-- **Severity Score (0-100):** Assign a severity score based on the risk level.
-- **Issue Summary:** Describe the issue in one sentence, focusing on what's wrong or risky.
-- **Recommended Fix:** Provide a clear, actionable recommendation in one sentence.
+Severity Level: Label the severity as either Critical, High, Medium, or Low.
+Severity Score (0-100): Assign a score that reflects the risk level of the issue.
+Issue Summary: Provide a one-sentence description of the issue, clearly stating the security risk or vulnerability.
+Recommended Fix: Offer a direct, actionable fix for the issue in one concise sentence.
 
-If no issues are found, state 'No security issues found' and provide an overall security score based on code quality, best practices, and potential vulnerabilities (0-100). Avoid any general descriptions of the contract and focus solely on **security issues** and **actionable insights**.
-
-If you cannot analyze the provided input, explain why and what you need instead.
-
-**Do not elaborate on contract functionality or unrelated aspects.** Stick to the above format and avoid any additional commentary or explanation.`
+If the analysis reveals no security vulnerabilities, respond only with 'No issues found.' Avoid all other commentary, explanations, or interpretations. Your response should focus exclusively on any security issues found and their recommended fixes.`
           },
           {
             role: "user",

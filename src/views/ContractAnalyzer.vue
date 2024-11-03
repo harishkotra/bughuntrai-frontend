@@ -211,7 +211,7 @@
                   </svg>
                 </div>
                 <div class="text-sm text-gray-400">
-                  <p>Currently using <span class="text-yellow-500 font-mono">Llama 3.1 8B</span> model for analysis. 
+                  <p>Currently using <span class="text-yellow-500 font-mono">Codestral by Mistral.ai</span> model for analysis. 
                   More powerful models will be integrated in future updates to enhance analysis capabilities.<br /> <br />
                   <strong>Note:</strong> Analysis results are for reference only and should not be considered as a complete security audit.
                   Always perform thorough testing and professional audits before deploying contracts to production.</p>
@@ -356,53 +356,13 @@
           </div>
 
           <!-- Submit Report Section -->
-          <div class="bg-gray-800 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-lg font-semibold">Submit Report On-Chain</h3>
-                <p class="text-gray-400">
-                  Submit this analysis report to the blockchain for permanent record and verification.
-                </p>
-              </div>
-              <button
-                @click="handleSubmitReport"
-                :disabled="isSubmitting || !isConnected || !isCorrectChain"
-                class="flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg"
-              >
-                <span v-if="isSubmitting" class="mr-2">
-                  <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                </span>
-                {{ getSubmitButtonText }}
-              </button>
-            </div>
-            
-            <!-- Transaction Status -->
-            <div v-if="txHash" class="mt-4 bg-gray-700 rounded-lg p-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <span class="text-sm text-gray-400 mr-2">Transaction:</span>
-                  <a 
-                    :href="`https://testnet.aiascan.com/tx/${txHash}`"
-                    target="_blank"
-                    class="text-blue-400 hover:text-blue-300 font-mono text-sm"
-                  >
-                    {{ shortenHash(txHash) }}
-                  </a>
-                </div>
-                <div class="flex items-center">
-                  <span 
-                    class="px-2 py-1 rounded-full text-xs font-medium"
-                    :class="{'bg-yellow-900 text-yellow-200': txPending, 'bg-green-900 text-green-200': !txPending}"
-                  >
-                    {{ txPending ? 'Pending' : 'Confirmed' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SubmitReportSection 
+              v-if="analysisResult"
+              :is-submitting="isSubmitting"
+              :tx-hash="txHash"
+              :tx-pending="txPending"
+              @submit="handleSubmitReport"
+          />
         </template>
 
         <!-- Raw LLM Response (show when isError is true) -->
@@ -432,6 +392,7 @@ import { useLLM } from '../composables/useLLM'
 import axios from 'axios'
 import { ethers } from 'ethers'
 import { Shield, Zap, Users } from 'lucide-vue-next'
+import SubmitReportSection from '../components/SubmitReportSection.vue'
 
 // Component state
 const contractCode = ref('')
@@ -689,6 +650,17 @@ async function handleAnalyzeContract() {
       return
     }
     
+    // Force risk score to 10 if no actual issues found
+    if (result.issues.length === 0 || 
+        (result.issues.length === 1 && result.issues[0].title.toLowerCase().includes('no security issues'))) {
+      result.riskScore = 10;
+      result.issues = [{
+        severity: 'low',
+        title: 'No Security Issues Found',
+        description: 'Code analysis found no significant security vulnerabilities.'
+      }];
+    }
+    
     // Only set analysis result if it's a valid analysis
     analysisResult.value = result
   } catch (error) {
@@ -700,42 +672,44 @@ async function handleAnalyzeContract() {
 }
 
 async function performBasicAnalysis() {
-  const code = contractCode.value.toLowerCase()
-  const issues = []
-  let riskScore = 0
+  // const code = contractCode.value.toLowerCase()
+  // const issues = []
+  // let riskScore = 0
   
-  // Basic security checks
-  if (code.includes('call') && !code.includes('reentrancyguard')) {
-    issues.push({
-      severity: 'critical',
-      title: 'Potential Reentrancy Vulnerability',
-      description: 'The contract uses low-level call without ReentrancyGuard protection',
-      suggestion: 'Use OpenZeppelin\'s ReentrancyGuard or implement checks-effects-interactions pattern'
-    })
-    riskScore += 30
-  }
+  // // Basic security checks
+  // if (code.includes('call') && !code.includes('reentrancyguard')) {
+  //   issues.push({
+  //     severity: 'critical',
+  //     title: 'Potential Reentrancy Vulnerability',
+  //     description: 'The contract uses low-level call without ReentrancyGuard protection',
+  //     suggestion: 'Use OpenZeppelin\'s ReentrancyGuard or implement checks-effects-interactions pattern'
+  //   })
+  //   riskScore += 30
+  // }
   
-  if ((code.includes('.transfer(') || code.includes('.send(')) && !code.includes('require')) {
-    issues.push({
-      severity: 'high',
-      title: 'Unchecked Return Values',
-      description: 'Transfer/send return values are not checked',
-      suggestion: 'Use SafeERC20 or check return values with require statements'
-    })
-    riskScore += 20
-  }
+  // if ((code.includes('.transfer(') || code.includes('.send(')) && !code.includes('require')) {
+  //   issues.push({
+  //     severity: 'high',
+  //     title: 'Unchecked Return Values',
+  //     description: 'Transfer/send return values are not checked',
+  //     suggestion: 'Use SafeERC20 or check return values with require statements'
+  //   })
+  //   riskScore += 20
+  // }
 
-  analysisResult.value = {
-    riskScore: Math.min(riskScore, 100),
-    issues,
-    suggestions: [
-      {
-        title: 'Fallback Analysis',
-        description: 'This is a basic analysis due to AI service unavailability. Consider retrying later for detailed analysis.'
-      }
-    ]
-  }
+  // analysisResult.value = {
+  //   riskScore: Math.min(riskScore, 100),
+  //   issues,
+  //   suggestions: [
+  //     {
+  //       title: 'Fallback Analysis',
+  //       description: 'This is a basic analysis due to AI service unavailability. Consider retrying later for detailed analysis.'
+  //     }
+  //   ]
+  // }
+  return null;
 }
+
 
 async function handleSubmitReport() {
   if (!analysisResult.value || !isConnected.value || !isCorrectChain.value) return
@@ -744,21 +718,20 @@ async function handleSubmitReport() {
   txPending.value = true
   
   try {
-    const result = await submitContractReport({
+    const { receipt, success } = await submitContractReport({
       contractAddress: contractAddress.value || ethers.ZeroAddress,
       riskScore: Math.floor(analysisResult.value.riskScore),
       issues: analysisResult.value.issues,
+      suggestions: analysisResult.value.suggestions
     })
     
-    if (result?.hash) {
-      txHash.value = result.hash
-      await result.wait()
+    if (success && receipt?.hash) {
+      txHash.value = receipt.hash
       txPending.value = false
     }
     
   } catch (error) {
     console.error('Error submitting report:', error)
-    // Show error to user (you might want to add an error display in the template)
     alert(`Failed to submit report: ${error.message}`)
   } finally {
     isSubmitting.value = false

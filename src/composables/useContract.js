@@ -474,52 +474,80 @@ export function useContract() {
       isLoading.value = true
       error.value = ''
       txHash.value = ''
-  
+    
       try {
         const contract = await getContract()
         
-        // Ensure contract address is valid
-        const targetAddress = contractAddress || ethers.ZeroAddress
-        
-        // Generate IPFS-like hash
+        // Create report data
+        const reportData = {
+          timestamp: Date.now(),
+          contractAddress,
+          riskScore,
+          issues,
+          suggestions,
+          auditor: address.value
+        }
+    
+        // Generate IPFS-like hash (mock for now)
         const ipfsHash = 'Qm' + Math.random().toString(36).substring(2, 15)
         
-        // Convert risk score to BigInt if needed
-        const riskScoreBigInt = BigInt(Math.floor(riskScore))
-        
-        // Estimate gas
-        const gasEstimate = await contract.submitReport.estimateGas(
-          targetAddress,
-          ipfsHash,
-          riskScoreBigInt
-        )
-        
-        // Add 20% buffer using BigInt math
-        const gasLimit = gasEstimate * BigInt(120) / BigInt(100)
-        
-        // Submit transaction
-        const tx = await contract.submitReport(
-          targetAddress,
-          ipfsHash,
-          riskScoreBigInt,
-          { gasLimit }
-        )
-        
-        txHash.value = tx.hash
-        
-        // Wait for confirmation
-        const receipt = await tx.wait()
-        
-        return {
-          success: true,
-          receipt,
-          hash: tx.hash
+        try {
+          // Estimate gas
+          const gasEstimate = await contract.submitReport.estimateGas(
+            contractAddress,
+            ipfsHash,
+            riskScore
+          )
+          
+          // Add 20% buffer to gas estimate using BigInt math
+          const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100)
+          
+          // Submit to blockchain
+          const tx = await contract.submitReport(
+            contractAddress,
+            ipfsHash,
+            riskScore,
+            { gasLimit }
+          )
+          
+          txHash.value = tx.hash
+          
+          // Wait for transaction confirmation
+          const receipt = await tx.wait()
+          
+          return {
+            success: true,
+            receipt,
+            reportData
+          }
+        } catch (gasError) {
+          // If gas estimation fails, try without gas limit
+          console.warn('Gas estimation failed, trying without gas limit:', gasError)
+          
+          const tx = await contract.submitReport(
+            contractAddress,
+            ipfsHash,
+            riskScore
+          )
+          
+          txHash.value = tx.hash
+          
+          const receipt = await tx.wait()
+          
+          return {
+            success: true,
+            receipt,
+            reportData
+          }
         }
-  
+    
       } catch (err) {
         console.error('Error submitting report:', err)
         error.value = err.message || 'Failed to submit report'
-        throw err
+        return {
+          success: false,
+          error: err.message
+        }
       } finally {
         isLoading.value = false
       }

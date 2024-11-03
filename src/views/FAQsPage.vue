@@ -41,9 +41,9 @@
     <div class="mt-12 bg-gray-800 rounded-lg p-8 text-center">
       <h2 class="text-2xl font-bold mb-4">Still Have Questions?</h2>
       <p class="text-gray-300 mb-6">
-        Can't find the answer you're looking for? Feel free to reach out to our support team.
+        Can't find the answer you're looking for? Feel free to reach out through Github issues.
       </p>
-      <div class="flex justify-center space-x-4">
+      <!-- <div class="flex justify-center space-x-4">
         <a 
           href="https://discord.gg/your-server" 
           target="_blank"
@@ -63,7 +63,7 @@
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </a>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
