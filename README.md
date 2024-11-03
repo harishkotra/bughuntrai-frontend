@@ -92,13 +92,162 @@ BugHuntr.ai aims to become the go-to platform for smart contract security analys
 ![analyser](https://github.com/user-attachments/assets/8c3ed4ee-ab1c-4aaa-9abc-f07021a750d2)
 ![submitting](https://github.com/user-attachments/assets/5900a492-8171-49ff-984a-ddcaa28dcb58)
 
-## 🤝 Contributing
+## Warning
+These contracts are **UNSAFE** and should **NEVER** be deployed on any production network. They contain known vulnerabilities that would result in loss of funds if exploited.
 
-We welcome contributions! Please check our [Contributing Guidelines](CONTRIBUTING.md) for details on how to submit pull requests.
+# ⚠️ VULNERABLE CONTRACTS - DO NOT USE IN PRODUCTION ⚠️
 
-## 📄 License
+These contracts contain **INTENTIONAL** security vulnerabilities for educational and testing purposes only.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Purpose
+- Demonstration of common smart contract vulnerabilities
+- Testing of security tools and audit processes
+- Educational reference for security researchers
+
+## Warning
+These contracts are **UNSAFE** and should **NEVER** be deployed on any production network. They contain known vulnerabilities that would result in loss of funds if exploited.
+
+1. `SwapRouterVulnerable.sol` - Contains severe security vulnerabilities
+   - Unauthorized withdrawal vulnerability
+   - Reentrancy vulnerability
+   - Integer overflow vulnerability
+   - Unchecked return values
+   - Price manipulation vulnerability
+
+```
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity =0.7.6;
+pragma abicoder v2;
+
+import '@uniswap/v3-core/contracts/libraries/SafeCast.sol';
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+
+/// @title Uniswap V3 Swap Router with intentional severe security issues
+contract SwapRouterVulnerable {
+    using SafeCast for uint256;
+    using Path for bytes;
+
+    address public owner;
+    mapping(address => uint256) public balances;
+    
+    // Severe Issue 1: Public function that can drain contract
+    function withdrawAll() public {
+        // Missing access control - anyone can drain
+        payable(msg.sender).transfer(address(this).balance);
+    }
+    
+    // Severe Issue 2: Reentrancy vulnerability
+    function swap(address token, uint256 amount) public {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        // Dangerous pattern: state update after external call
+        (bool success,) = msg.sender.call{value: amount}("");
+        require(success, "Transfer failed");
+        balances[msg.sender] -= amount; // State update after external call
+    }
+    
+    // Severe Issue 3: Integer overflow
+    function deposit() public payable {
+        // No overflow check when adding to balance
+        balances[msg.sender] = balances[msg.sender] + msg.value;
+    }
+
+    // Severe Issue 4: Unchecked return values
+    function transferTokens(address token, address to, uint256 amount) public {
+        // Dangerous: Not checking return value of transfer
+        IERC20(token).transfer(to, amount);
+    }
+
+    // Severe Issue 5: Potential price manipulation
+    function getPrice(address pair) public view returns (uint256) {
+        // Using a single DEX price without any checks
+        // Vulnerable to flash loan attacks and price manipulation
+        return IUniswapV3Pool(pair).slot0().sqrtPriceX96;
+    }
+
+    receive() external payable {}
+}
+```
+
+2. `SwapRouterMedium.sol` - Contains medium security vulnerabilities
+   - Weak access control
+   - Unsafe ownership transfer
+   - Block timestamp dependency
+   - Input validation issues
+   - Centralization risks
+   - DOS vulnerabilities
+   - Improper validation
+
+```
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity =0.7.6;
+pragma abicoder v2;
+
+import '@uniswap/v3-core/contracts/libraries/SafeCast.sol';
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+
+/// @title Uniswap V3 Swap Router with intentional medium security issues
+contract SwapRouterMedium {
+    using SafeCast for uint256;
+    using Path for bytes;
+
+    address public admin;
+    bool public locked;
+    uint256 public constant DEADLINE_GRACE_PERIOD = 1 hours;
+    mapping(address => uint256) public lastActivity;
+    
+    constructor() {
+        admin = msg.sender;
+    }
+
+    // Medium Issue 1: Weak access control
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Not admin");
+        _; 
+    }
+
+    // Medium Issue 2: Lack of two-step ownership transfer
+    function transferAdmin(address newAdmin) public onlyAdmin {
+        // Dangerous: Direct transfer without confirmation
+        admin = newAdmin;
+    }
+
+    // Medium Issue 3: Block timestamp manipulation risk
+    function isDeadlineValid(uint256 deadline) public view returns (bool) {
+        // Vulnerable to miner manipulation within certain bounds
+        return block.timestamp <= deadline + DEADLINE_GRACE_PERIOD;
+    }
+
+    // Medium Issue 4: Insufficient input validation
+    function setUserActivity(address user, uint256 timestamp) public {
+        // No bounds checking on timestamp
+        lastActivity[user] = timestamp;
+    }
+
+    // Medium Issue 5: Centralization risk
+    function emergencyStop() public onlyAdmin {
+        // Single admin can halt all operations
+        locked = true;
+    }
+
+    // Medium Issue 6: DOS potential
+    function batchProcess(address[] calldata users) public {
+        // No limit on array size - potential DOS
+        for(uint i = 0; i < users.length; i++) {
+            lastActivity[users[i]] = block.timestamp;
+        }
+    }
+
+    // Medium Issue 7: Improper validation
+    function processSwap(uint256 amount, uint256 minReturn) public returns (uint256) {
+        // Basic slippage check but no proper decimals handling
+        require(amount > 0, "Invalid amount");
+        require(minReturn > 0, "Invalid minReturn");
+        return amount * 99 / 100; // Simplified for demo
+    }
+}
+```
 
 ## 🔗 Links
 

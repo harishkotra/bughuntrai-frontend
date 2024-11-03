@@ -20,21 +20,6 @@ export function useLLM() {
   function extractKeyPoints(text) {
     console.log('Raw LLM Response:', text)
     
-    if (text.trim().toLowerCase() === 'no issues found.') {
-      return {
-        issues: [{
-          severity: 'low',
-          title: 'No Security Issues',
-          description: 'Code analysis found no significant security vulnerabilities.'
-        }],
-        suggestions: [{
-          title: 'General Recommendation',
-          description: 'While no issues were found, consider regular security reviews and testing.'
-        }],
-        riskScore: 10
-      }
-    }
-
     const lines = text.split(/[\n•-]/).filter(line => line.trim())
     const issues = []
     const suggestions = []
@@ -43,74 +28,59 @@ export function useLLM() {
     for (const line of lines) {
       const trimmed = line.trim()
       if (!trimmed) continue
-
-      // Look for severity scores (e.g., "Severity: 80/100")
-      const severityMatch = trimmed.match(/severity:?\s*(\d+)(?:\s*\/\s*100)?/i)
-      if (severityMatch) {
-        const score = parseInt(severityMatch[1])
-        if (!isNaN(score) && score > maxSeverityScore) {
-          maxSeverityScore = score
+  
+      // Check for explicit severity levels
+      if (trimmed.toLowerCase().includes('severity level')) {
+        const severity = trimmed.toLowerCase()
+        if (severity.includes('critical')) maxSeverityScore = Math.max(maxSeverityScore, 100)
+        else if (severity.includes('high')) maxSeverityScore = Math.max(maxSeverityScore, 90)
+        else if (severity.includes('medium')) maxSeverityScore = Math.max(maxSeverityScore, 50)
+        else if (severity.includes('low')) maxSeverityScore = Math.max(maxSeverityScore, 30)
+      }
+  
+      // Check for severity scores
+      const scoreMatch = trimmed.match(/severity score:?\s*(\d+)/i)
+      if (scoreMatch) {
+        const score = parseInt(scoreMatch[1])
+        if (!isNaN(score)) {
+          maxSeverityScore = Math.max(maxSeverityScore, score)
         }
       }
-      
-      // Determine severity level from explicit mentions
+  
+      // Determine issue severity
       let severity = 'medium'
-      if (trimmed.toLowerCase().includes('severity: critical')) severity = 'critical'
-      else if (trimmed.toLowerCase().includes('severity: high')) severity = 'high'
-      else if (trimmed.toLowerCase().includes('severity: low')) severity = 'low'
-      
-      // Check if line describes an issue
-      if (trimmed.toLowerCase().includes('vulnerable') || 
-          trimmed.toLowerCase().includes('risk') ||
-          trimmed.toLowerCase().includes('issue') ||
-          trimmed.toLowerCase().includes('problem') ||
-          trimmed.toLowerCase().includes('severity')) {
+      if (trimmed.toLowerCase().includes('critical')) severity = 'critical'
+      else if (trimmed.toLowerCase().includes('high')) severity = 'high'
+      else if (trimmed.toLowerCase().includes('low')) severity = 'low'
+  
+      // Parse issues
+      if (trimmed.toLowerCase().includes('issue summary')) {
+        const description = trimmed.split('**Issue Summary:**').pop().trim()
         issues.push({
           severity,
-          title: trimmed.split('.')[0],
-          description: trimmed
-        })
-      }
-      // Check if line is a suggestion
-      else if (trimmed.toLowerCase().includes('recommend') ||
-               trimmed.toLowerCase().includes('should') ||
-               trimmed.toLowerCase().includes('consider') ||
-               trimmed.toLowerCase().includes('improvement')) {
-        suggestions.push({
-          title: 'Improvement Suggestion',
-          description: trimmed
+          title: description.split('.')[0],
+          description: description
         })
       }
     }
-
-    // If no issues found but text mentions it explicitly
-    if (issues.length === 0 && text.toLowerCase().includes('no security issues found')) {
-      return {
-        issues: [{
-          severity: 'low',
-          title: 'No Security Issues Found',
-          description: 'Code analysis found no significant security vulnerabilities.'
-        }],
-        suggestions: suggestions.length ? suggestions : [{
-          title: 'General Recommendation',
-          description: 'While no issues were found, consider regular security reviews and testing.'
-        }],
-        riskScore: 10  // Set to 10% for no issues
-      }
+  
+    // If no explicit severity score was found, calculate based on highest severity issue
+    if (maxSeverityScore === 0 && issues.length > 0) {
+      if (issues.some(i => i.severity === 'critical')) maxSeverityScore = 100
+      else if (issues.some(i => i.severity === 'high')) maxSeverityScore = 90
+      else if (issues.some(i => i.severity === 'medium')) maxSeverityScore = 50
+      else maxSeverityScore = 30
     }
-    
-    // Also in the main return statement of extractKeyPoints (around line 100-105), update the riskScore calculation:
-    return { 
-      issues: issues.length ? issues : [{
-        severity: 'low',
-        title: 'No Security Issues',
-        description: 'Code analysis found no significant security vulnerabilities.'
-      }],
+  
+    return {
+      issues,
       suggestions: suggestions.length ? suggestions : [{
-        title: 'General Recommendation',
-        description: 'While no issues were found, consider regular security reviews and testing.'
+        title: 'Security Review',
+        description: issues.length ? 
+          'Consider addressing the identified vulnerabilities before deployment.' :
+          'While no issues were found, consider regular security reviews and testing.'
       }],
-      riskScore: issues.length ? maxSeverityScore : 10
+      riskScore: maxSeverityScore || (issues.length === 0 ? 10 : 50) // Default to 50 if issues found but no severity score
     }
   }
 

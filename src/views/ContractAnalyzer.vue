@@ -267,11 +267,7 @@
           <div class="grid grid-cols-2 gap-4">
             <div class="bg-gray-700 rounded-lg p-4">
               <h3 class="text-sm text-gray-400 mb-1">Risk Score</h3>
-              <div class="text-3xl font-bold" :class="{
-                'text-red-400': analysisResult.riskScore >= 70,
-                'text-yellow-400': analysisResult.riskScore >= 30 && analysisResult.riskScore < 70,
-                'text-green-400': analysisResult.riskScore < 30
-              }">
+              <div :class="[riskScoreTextColor]">
                 {{ analysisResult.riskScore }}%
               </div>
             </div>
@@ -475,9 +471,19 @@ const isValidAddress = computed(() => {
 
 const riskScoreColor = computed(() => {
   const score = analysisResult.value?.riskScore || 0
-  if (score < 30) return 'bg-green-500'
-  if (score < 70) return 'bg-yellow-500'
-  return 'bg-red-500'
+  // For critical/high severity issues (70-100)
+  if (score >= 70) return 'bg-red-500'
+  // For medium severity issues (30-69)
+  if (score >= 30) return 'bg-yellow-500'
+  // For low severity/no issues (0-29)
+  return 'bg-green-500'
+})
+
+const riskScoreTextColor = computed(() => {
+  const score = analysisResult.value?.riskScore || 0
+  if (score >= 70) return 'text-red-400'
+  if (score >= 30) return 'text-yellow-400'
+  return 'text-green-400'
 })
 
 const getSubmitButtonText = computed(() => {
