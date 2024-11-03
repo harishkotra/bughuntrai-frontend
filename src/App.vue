@@ -132,10 +132,11 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex justify-between items-center">
           <div class="text-gray-400 text-sm">
-            © 2024 BugHuntr.ai. All rights reserved.
+            &copy; 2024 BugHuntr.ai. 
           </div>
           <div class="flex space-x-6">
-            <a href="#" class="text-gray-400 hover:text-white">
+            <p class="text-gray-400 hover:text-white">Discord and other channels, coming soon. Our product is great but our footer is a joke :)</p>
+            <!-- <a href="#" class="text-gray-400 hover:text-white">
               Twitter
             </a>
             <a href="#" class="text-gray-400 hover:text-white">
@@ -143,7 +144,7 @@
             </a>
             <a href="#" class="text-gray-400 hover:text-white">
               Discord
-            </a>
+            </a> -->
           </div>
         </div>
       </div>

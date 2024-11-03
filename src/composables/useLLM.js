@@ -11,8 +11,12 @@ export function useLLM() {
     baseURL: API_URL,
     headers: {
       'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    },
+    withCredentials: false  // Important for CORS
   })
 
   // Helper to extract key points from analysis
@@ -96,10 +100,10 @@ export function useLLM() {
     if (!code?.trim()) {
       throw new Error('No code provided')
     }
-
+  
     isLoading.value = true
     error.value = null
-
+  
     try {
       const response = await axiosInstance.post('', {
         model: 'llama',
@@ -113,7 +117,9 @@ Severity Score (0-100): Assign a severity score based on the risk level.
 Issue Summary: Describe the issue in one sentence, focusing on what's wrong or risky.
 Recommended Fix: Provide a clear, actionable recommendation in one sentence.
 
-If no issues are found, state 'No security issues found' and provide an overall security score based on code quality, best practices, and potential vulnerabilities (0-100). Avoid any general descriptions of the contract and focus solely on security issues and actionable insights.`
+If no issues are found, state 'No security issues found' and provide an overall security score based on code quality, best practices, and potential vulnerabilities (0-100). Avoid any general descriptions of the contract and focus solely on security issues and actionable insights.
+  
+  If you cannot analyze the provided input, explain why and what you need instead.`
           },
           {
             role: "user",
@@ -123,14 +129,34 @@ If no issues are found, state 'No security issues found' and provide an overall 
         temperature: 0.3,
         max_tokens: 1000
       })
-
+  
       if (!response.data?.choices?.[0]?.message?.content) {
         throw new Error('Invalid API response')
       }
-
+  
       const analysisText = response.data.choices[0].message.content
-      return extractKeyPoints(analysisText)
-
+      console.log('Raw LLM Response:', analysisText)
+  
+      // Check if response indicates inability to analyze
+      if (analysisText.toLowerCase().includes('unable to analyze') ||
+          analysisText.toLowerCase().includes("can't analyze") ||
+          analysisText.toLowerCase().includes('cannot analyze') ||
+          analysisText.toLowerCase().includes('please provide')) {
+        return {
+          rawResponse: analysisText.trim(),
+          isError: true
+        }
+      }
+  
+      // Normal analysis processing
+      const { issues, suggestions, riskScore } = extractKeyPoints(analysisText)
+      return {
+        issues,
+        suggestions,
+        riskScore,
+        rawResponse: analysisText
+      }
+  
     } catch (err) {
       console.error('Full API Error:', err)
       error.value = err.message

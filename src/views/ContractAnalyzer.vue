@@ -1,5 +1,110 @@
 <template>
-    <div class="w-full max-w-7xl mx-auto space-y-8 p-4">
+    <!-- Landing page for users without wallet connection -->
+    <div v-if="!isConnected" class="space-y-20">
+      <!-- Hero Section -->
+      <section class="relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center">
+          <h1 class="text-5xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-blue-600">
+            Secure Your Smart Contracts with AI
+          </h1>
+          <p class="text-xl text-gray-300 mb-10 max-w-3xl mx-auto">
+            BugHuntr.ai uses advanced AI to analyze your smart contracts, identify vulnerabilities, 
+            and ensure your code is production-ready.
+          </p>
+          <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <!-- <button 
+              @click="connect"
+              class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-lg flex items-center justify-center"
+            >
+              <span v-if="isLoading" class="mr-2">
+                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+              </span>
+              {{ isLoading ? 'Connecting...' : 'Connect Wallet to Start' }}
+            </button> -->
+            <a 
+              href="#how-it-works"
+              class="px-8 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold text-lg"
+            >
+              Learn More
+            </a>
+          </div>
+        </div>
+
+        <!-- Animated Background -->
+        <div class="absolute inset-0 -z-10 overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-b from-blue-900/20 to-transparent"></div>
+          <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-500/30 rounded-full blur-3xl"></div>
+        </div>
+      </section>
+
+      <!-- Features Grid -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-bold text-center mb-12">Why Choose BugHuntr.ai?</h2>
+        <div class="grid md:grid-cols-3 gap-8">
+          <div v-for="feature in features" :key="feature.title" 
+               class="bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700">
+            <div class="text-blue-400 mb-4 w-12 h-12 flex items-center justify-center rounded-lg bg-blue-400/10">
+              <component :is="feature.icon" class="w-6 h-6" />
+            </div>
+            <h3 class="text-xl font-semibold mb-3">{{ feature.title }}</h3>
+            <p class="text-gray-400">{{ feature.description }}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section id="how-it-works" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-bold text-center mb-12">How It Works</h2>
+        <div class="grid md:grid-cols-4 gap-8">
+          <div v-for="(step, index) in steps" :key="step.title" 
+               class="relative">
+            <div class="flex flex-col items-center text-center">
+              <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-xl font-bold mb-4">
+                {{ index + 1 }}
+              </div>
+              <h3 class="text-lg font-semibold mb-2">{{ step.title }}</h3>
+              <p class="text-gray-400">{{ step.description }}</p>
+            </div>
+            <!-- Connector Line -->
+            <div v-if="index < steps.length - 1" 
+                 class="hidden md:block absolute top-1/4 left-full w-full h-0.5 bg-gray-700"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats Section -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid md:grid-cols-3 gap-8 text-center">
+          <div v-for="stat in stats" :key="stat.label" class="bg-gray-800/50 rounded-xl p-8">
+            <div class="text-3xl font-bold text-blue-400 mb-2">{{ stat.value }}</div>
+            <div class="text-gray-300">{{ stat.label }}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Section -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-12 text-center">
+          <h2 class="text-3xl font-bold mb-6">Ready to Secure Your Smart Contracts?</h2>
+          <p class="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
+            Join thousands of developers who trust BugHuntr.ai for their smart contract security needs.
+          </p>
+          <button 
+            @click="connect"
+            class="px-8 py-4 bg-white text-blue-600 hover:bg-gray-100 rounded-lg font-semibold text-lg"
+          >
+            Get Started Now
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Contract Analysis UI for connected users -->
+    <div v-else>
+      <div class="w-full max-w-7xl mx-auto space-y-8 p-4">
       <!-- Instructions -->
       <div class="bg-gray-800 rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Smart Contract Security Analyzer</h2>
@@ -179,104 +284,145 @@
           </div>
         </div>
       </div>
-  
       <!-- Analysis Results -->
-      <div v-if="analysisResult" class="space-y-6">
-        <!-- Risk Score Progress -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-4">Risk Assessment</h3>
-          <div class="flex items-center mb-4">
-            <div class="w-full bg-gray-700 rounded-full h-4">
-              <div
-                class="h-full rounded-full transition-all duration-500"
-                :class="riskScoreColor"
-                :style="{ width: `${analysisResult.riskScore}%` }"
-              ></div>
+      <div v-if="analysisResult || analysisError" class="space-y-6">
+        <!-- Analysis Error/Note -->
+        <div v-if="analysisError" class="bg-gray-800 rounded-lg p-6">
+          <div class="flex items-start space-x-3">
+            <div class="flex-shrink-0">
+              <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
             </div>
-            <span class="ml-4 font-mono">{{ analysisResult.riskScore }}%</span>
+            <div class="flex-1">
+              <h3 class="text-lg font-medium text-yellow-400">Analysis Note</h3>
+              <div class="mt-2 text-gray-300 text-sm whitespace-pre-wrap">{{ analysisError }}</div>
+            </div>
           </div>
         </div>
-  
-        <!-- Issues Found -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-4">Detected Issues</h3>
-          <div v-if="analysisResult.issues.length" class="space-y-4">
-            <div
-              v-for="(issue, index) in analysisResult.issues"
-              :key="index"
-              class="p-4 rounded-lg"
-              :class="getIssueBgColor(issue.severity)"
-            >
-              <div class="flex items-start">
-                <div class="flex-shrink-0">
-                  <span class="text-2xl" :class="getIssueSeverityColor(issue.severity)">●</span>
-                </div>
-                <div class="ml-3">
-                  <h4 class="font-medium">{{ issue.title }}</h4>
-                  <p class="text-gray-400 mt-1">{{ issue.description }}</p>
-                  <div v-if="issue.codeSnippet" class="mt-2">
-                    <pre class="bg-gray-900 p-3 rounded-lg overflow-x-auto text-sm">{{ issue.codeSnippet }}</pre>
+
+        <!-- Regular Analysis Results (only show if valid analysis) -->
+        <template v-if="analysisResult && !analysisError && !analysisResult.isError">
+          <!-- Risk Score Progress -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-4">Risk Assessment</h3>
+            <div class="flex items-center mb-4">
+              <div class="w-full bg-gray-700 rounded-full h-4">
+                <div
+                  class="h-full rounded-full transition-all duration-500"
+                  :class="riskScoreColor"
+                  :style="{ width: `${analysisResult.riskScore}%` }"
+                ></div>
+              </div>
+              <span class="ml-4 font-mono">{{ analysisResult.riskScore }}%</span>
+            </div>
+          </div>
+
+          <!-- Issues Found -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-lg font-semibold mb-4">Detected Issues</h3>
+            <div v-if="analysisResult.issues.length" class="space-y-4">
+              <div
+                v-for="(issue, index) in analysisResult.issues"
+                :key="index"
+                class="p-4 rounded-lg"
+                :class="getIssueBgColor(issue.severity)"
+              >
+                <div class="flex items-start">
+                  <div class="flex-shrink-0">
+                    <span class="text-2xl" :class="getIssueSeverityColor(issue.severity)">●</span>
+                  </div>
+                  <div class="ml-3">
+                    <div class="flex items-center space-x-2">
+                      <h4 class="font-medium">{{ issue.title }}</h4>
+                      <span 
+                        class="px-2 py-0.5 text-xs rounded-full capitalize"
+                        :class="getIssueSeverityBadgeColor(issue.severity)"
+                      >
+                        {{ issue.severity }}
+                      </span>
+                    </div>
+                    <p class="text-gray-400 mt-1">{{ issue.description }}</p>
+                    <div v-if="issue.codeSnippet" class="mt-2">
+                      <pre class="bg-gray-900 p-3 rounded-lg overflow-x-auto text-sm">{{ issue.codeSnippet }}</pre>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div v-else class="text-gray-400 text-center py-4">
-            No issues detected
-          </div>
-        </div>
-  
-        <!-- Submit Report Section -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-lg font-semibold">Submit Report On-Chain</h3>
-              <p class="text-gray-400">
-                Submit this analysis report to the blockchain for permanent record and verification.
-              </p>
+            <div v-else class="text-gray-400 text-center py-4">
+              No issues detected
             </div>
-            <button
-              @click="handleSubmitReport"
-              :disabled="isSubmitting || !isConnected || !isCorrectChain"
-              class="flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg"
-            >
-              <span v-if="isSubmitting" class="mr-2">
-                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                </svg>
-              </span>
-              {{ getSubmitButtonText }}
-            </button>
           </div>
-          
-          <!-- Transaction Status -->
-          <div v-if="txHash" class="mt-4 bg-gray-700 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <span class="text-sm text-gray-400 mr-2">Transaction:</span>
-                <a 
-                  :href="`https://testnet.aiascan.com/tx/${txHash}`"
-                  target="_blank"
-                  class="text-blue-400 hover:text-blue-300 font-mono text-sm"
-                >
-                  {{ shortenHash(txHash) }}
-                </a>
+
+          <!-- Submit Report Section -->
+          <div class="bg-gray-800 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-lg font-semibold">Submit Report On-Chain</h3>
+                <p class="text-gray-400">
+                  Submit this analysis report to the blockchain for permanent record and verification.
+                </p>
               </div>
-              <div class="flex items-center">
-                <span 
-                  class="px-2 py-1 rounded-full text-xs font-medium"
-                  :class="{'bg-yellow-900 text-yellow-200': txPending, 'bg-green-900 text-green-200': !txPending}"
-                >
-                  {{ txPending ? 'Pending' : 'Confirmed' }}
+              <button
+                @click="handleSubmitReport"
+                :disabled="isSubmitting || !isConnected || !isCorrectChain"
+                class="flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg"
+              >
+                <span v-if="isSubmitting" class="mr-2">
+                  <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
                 </span>
+                {{ getSubmitButtonText }}
+              </button>
+            </div>
+            
+            <!-- Transaction Status -->
+            <div v-if="txHash" class="mt-4 bg-gray-700 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                  <span class="text-sm text-gray-400 mr-2">Transaction:</span>
+                  <a 
+                    :href="`https://testnet.aiascan.com/tx/${txHash}`"
+                    target="_blank"
+                    class="text-blue-400 hover:text-blue-300 font-mono text-sm"
+                  >
+                    {{ shortenHash(txHash) }}
+                  </a>
+                </div>
+                <div class="flex items-center">
+                  <span 
+                    class="px-2 py-1 rounded-full text-xs font-medium"
+                    :class="{'bg-yellow-900 text-yellow-200': txPending, 'bg-green-900 text-green-200': !txPending}"
+                  >
+                    {{ txPending ? 'Pending' : 'Confirmed' }}
+                  </span>
+                </div>
               </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Raw LLM Response (show when isError is true) -->
+        <div v-else-if="analysisResult?.isError" class="bg-gray-800 rounded-lg p-6">
+          <div class="flex items-start space-x-3">
+            <div class="flex-shrink-0">
+              <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-medium text-blue-400">Analysis Response</h3>
+              <div class="mt-2 text-gray-300 text-sm whitespace-pre-wrap">{{ analysisResult.rawResponse }}</div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </template>
+  </div>
+</template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
@@ -285,6 +431,7 @@ import { useWallet } from '../composables/useWallet'
 import { useLLM } from '../composables/useLLM'
 import axios from 'axios'
 import { ethers } from 'ethers'
+import { Shield, Zap, Users } from 'lucide-vue-next'
 
 // Component state
 const contractCode = ref('')
@@ -300,9 +447,61 @@ const txPending = ref(false)
 const streamingResult = ref('')
 
 // Get composables
-const { isConnected, isCorrectChain } = useWallet()
+const { isConnected, isCorrectChain, isLoading } = useWallet()
 const { submitReport: submitContractReport } = useContract()
 const { analyzeContract: llmAnalyze, error: llmError, analysisStream } = useLLM()
+
+const features = [
+  {
+    icon: Shield,
+    title: 'Advanced AI Analysis',
+    description: 'Our AI engine uses state-of-the-art algorithms to detect vulnerabilities and security risks in your smart contracts.'
+  },
+  {
+    icon: Zap,
+    title: 'Real-time Results',
+    description: 'Get instant feedback on your code with detailed reports and actionable recommendations.'
+  },
+  {
+    icon: Users,
+    title: 'Community Verified',
+    description: 'All analysis reports are verified by our community of security experts and stored on-chain.'
+  }
+]
+
+const steps = [
+  {
+    title: 'Connect Wallet',
+    description: 'Connect your MetaMask wallet to access the platform.'
+  },
+  {
+    title: 'Submit Contract',
+    description: 'Paste your contract code or import from verified sources.'
+  },
+  {
+    title: 'AI Analysis',
+    description: 'Our AI engine analyzes your code for vulnerabilities.'
+  },
+  {
+    title: 'Get Report',
+    description: 'Review detailed findings and recommendations.'
+  }
+]
+
+// const stats = [
+//   {
+//     value: '500K+',
+//     label: 'Contracts Analyzed'
+//   },
+//   {
+//     value: '10K+',
+//     label: 'Vulnerabilities Found'
+//   },
+//   {
+//     value: '5,000+',
+//     label: 'Active Users'
+//   }
+// ]
 
 // Computed properties
 const isValidAddress = computed(() => {
@@ -334,6 +533,91 @@ watch(llmError, (newError) => {
     isAnalyzing.value = false
   }
 })
+
+function isValidSmartContract(code) {
+  const codeStr = code.toLowerCase().trim()
+  
+  // Basic checks for common contract indicators
+  const hasContractKeyword = codeStr.includes('contract ') || codeStr.includes('abstract contract ')
+  const hasPragma = codeStr.includes('pragma solidity')
+  const hasFunction = codeStr.includes('function ')
+  
+  // Check for common contract elements
+  const hasCommonElements = [
+    'public',
+    'private',
+    'internal',
+    'external',
+    'view',
+    'pure',
+    'payable',
+    'returns',
+    'address',
+    'uint',
+    'bool',
+    'struct',
+    'mapping'
+  ].some(keyword => codeStr.includes(keyword))
+  
+  // More specific checks for contract structure
+  const hasContractStructure = /contract\s+\w+\s*{[\s\S]*}/.test(code)
+  const hasImports = code.includes('import ') || code.includes('IERC')
+  
+  // Count significant lines (non-empty, non-comment)
+  const significantLines = code
+    .split('\n')
+    .filter(line => {
+      const trimmed = line.trim()
+      return trimmed && 
+             !trimmed.startsWith('//') && 
+             !trimmed.startsWith('/*') &&
+             !trimmed.startsWith('*')
+    })
+    .length
+
+  // Scoring system for validation
+  let validityScore = 0
+  if (hasContractKeyword) validityScore += 2
+  if (hasPragma) validityScore += 2
+  if (hasFunction) validityScore += 2
+  if (hasCommonElements) validityScore += 2
+  if (hasContractStructure) validityScore += 3
+  if (hasImports) validityScore += 1
+  if (significantLines > 10) validityScore += 2
+
+  return validityScore >= 6 // Require a minimum score to be considered valid
+}
+
+// Helper to check if LLM response indicates inability to analyze
+function isAnalysisErrorResponse(text) {
+  const errorIndicators = [
+    "unable to analyze",
+    "can't analyze",
+    "cannot analyze",
+    "error analyzing",
+    "please provide",
+    "need the contract",
+    "share the contract",
+    "require the source code"
+  ]
+  
+  return errorIndicators.some(indicator => 
+    text.toLowerCase().includes(indicator.toLowerCase())
+  )
+}
+
+function getIssueSeverityBadgeColor(severity) {
+  switch (severity.toLowerCase()) {
+    case 'critical':
+      return 'bg-red-900 text-red-200'
+    case 'high':
+      return 'bg-orange-900 text-orange-200'
+    case 'medium':
+      return 'bg-yellow-900 text-yellow-200'
+    default:
+      return 'bg-green-900 text-green-200'
+  }
+}
 
 // Methods
 async function handleImportContract() {
@@ -380,7 +664,16 @@ async function handleImportContract() {
 }
 
 async function handleAnalyzeContract() {
-  if (!contractCode.value.trim()) return
+  if (!contractCode.value.trim()) {
+    analysisError.value = 'Please provide contract code to analyze'
+    return
+  }
+
+  // Validate contract code
+  if (!isValidSmartContract(contractCode.value)) {
+    analysisError.value = 'Please provide valid Solidity smart contract code. Make sure your code includes contract definition and basic Solidity elements.'
+    return
+  }
   
   isAnalyzing.value = true
   analysisError.value = ''
@@ -388,6 +681,15 @@ async function handleAnalyzeContract() {
   
   try {
     const result = await llmAnalyze(contractCode.value)
+    
+    // Check if LLM response indicates it cannot analyze
+    if (isAnalysisErrorResponse(result.rawResponse)) {
+      analysisError.value = result.rawResponse
+      analysisResult.value = null
+      return
+    }
+    
+    // Only set analysis result if it's a valid analysis
     analysisResult.value = result
   } catch (error) {
     console.error('Error analyzing contract:', error)
