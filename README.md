@@ -168,6 +168,7 @@ contract SwapRouterVulnerable {
     receive() external payable {}
 }
 ```
+![risk-score-another](https://github.com/user-attachments/assets/577580f2-950b-4c8e-8576-5aa7a83e27f6)
 
 2. `SwapRouterMedium.sol` - Contains medium security vulnerabilities
    - Weak access control
@@ -248,6 +249,8 @@ contract SwapRouterMedium {
     }
 }
 ```
+
+![risks-shown](https://github.com/user-attachments/assets/28d982e2-1f1a-4c9f-a40e-f3cdb0968e09)
 
 ## 🔗 Links
 
