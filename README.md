@@ -4,7 +4,7 @@ BugHuntr.ai is an innovative platform that combines artificial intelligence with
 
 [Deployed Smart Contract on AIA Chain](https://testnet.aiascan.com/address/0x41B20e82DBFDe8557363Ca0B7C232C7288EA3Aae)
 
-[Smart Contract Code Repo] (https://github.com/harishkotra/bughuntrai)
+[Smart Contract Code Repo](https://github.com/harishkotra/bughuntrai)
 
 ## 🌟 Features
 
@@ -84,6 +84,13 @@ BugHuntr.ai aims to become the go-to platform for smart contract security analys
 - Blockchain: AIA Chain
 - AI Integration: Codestral by Mistral.ai
 - Analytics: The Graph (planned)
+
+## Screenshots
+
+![landingpage](https://github.com/user-attachments/assets/4c5cc352-d559-4610-98a4-ae6a23658dad)
+![submitted-transaction](https://github.com/user-attachments/assets/80d8c751-1d9e-438f-8979-95c6cafa2210)
+![analyser](https://github.com/user-attachments/assets/8c3ed4ee-ab1c-4aaa-9abc-f07021a750d2)
+![submitting](https://github.com/user-attachments/assets/5900a492-8171-49ff-984a-ddcaa28dcb58)
 
 ## 🤝 Contributing
 
