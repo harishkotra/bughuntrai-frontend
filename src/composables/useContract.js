@@ -440,13 +440,17 @@ const CONTRACT_ABI = [
 ]
 
 export function useContract() {
-    const { provider, signer, address, isConnected, isCorrectChain } = useWallet()
+  const { provider, address, isConnected, isCorrectChain } = useWallet()
     const contract = ref(null)
     const isLoading = ref(false)
     const error = ref('')
     const txHash = ref('')
   
     async function getContract() {
+      if (!window.ethereum) {
+        throw new Error('No wallet detected')
+      }
+
       if (!isConnected.value) {
         throw new Error('Wallet not connected')
       }
@@ -455,11 +459,15 @@ export function useContract() {
         throw new Error('Please switch to AIA Testnet')
       }
   
-      if (!contract.value) {
-        if (!signer.value) throw new Error('Signer not available')
-        contract.value = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer.value)
+      try {
+        const ethersProvider = new ethers.BrowserProvider(window.ethereum)
+        const signer = await ethersProvider.getSigner()
+        contract.value = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+        return contract.value
+      } catch (err) {
+        console.error('Error initializing contract:', err)
+        throw new Error('Failed to initialize contract')
       }
-      return contract.value
     }
   
     async function submitReport({ contractAddress, riskScore, issues, suggestions }) {
@@ -470,45 +478,42 @@ export function useContract() {
       try {
         const contract = await getContract()
         
-        // Create report data
-        const reportData = {
-          timestamp: Date.now(),
-          contractAddress,
-          riskScore,
-          issues,
-          suggestions,
-          auditor: address.value
-        }
-  
-        // Generate IPFS-like hash (mock for now)
+        // Ensure contract address is valid
+        const targetAddress = contractAddress || ethers.ZeroAddress
+        
+        // Generate IPFS-like hash
         const ipfsHash = 'Qm' + Math.random().toString(36).substring(2, 15)
         
-        // Estimate gas with 20% buffer
-        const gasEstimate = await contract.submitReport.estimateGas(
-          contractAddress,
-          ipfsHash,
-          riskScore
-        )
-        const gasLimit = gasEstimate.mul(120).div(100)
+        // Convert risk score to BigInt if needed
+        const riskScoreBigInt = BigInt(Math.floor(riskScore))
         
-        // Submit to blockchain
-        const tx = await contract.submitReport(
-          contractAddress,
+        // Estimate gas
+        const gasEstimate = await contract.submitReport.estimateGas(
+          targetAddress,
           ipfsHash,
-          riskScore,
+          riskScoreBigInt
+        )
+        
+        // Add 20% buffer using BigInt math
+        const gasLimit = gasEstimate * BigInt(120) / BigInt(100)
+        
+        // Submit transaction
+        const tx = await contract.submitReport(
+          targetAddress,
+          ipfsHash,
+          riskScoreBigInt,
           { gasLimit }
         )
         
         txHash.value = tx.hash
         
-        // Wait for transaction confirmation
+        // Wait for confirmation
         const receipt = await tx.wait()
         
         return {
           success: true,
           receipt,
-          reportData,
-          ipfsHash
+          hash: tx.hash
         }
   
       } catch (err) {
@@ -519,138 +524,138 @@ export function useContract() {
         isLoading.value = false
       }
     }
-  
-    async function getReports(contractAddress) {
-      error.value = ''
+
+  // Rest of your existing functions remain the same...
+  async function getReports(contractAddress) {
+    error.value = ''
+    
+    try {
+      const contract = await getContract()
+      const reports = await contract.getReports(contractAddress)
       
-      try {
-        const contract = await getContract()
-        const reports = await contract.getReports(contractAddress)
-        
-        // Format the reports data
-        return reports.map(report => ({
-          contractAddress: report.contractAddress,
-          ipfsHash: report.ipfsHash,
-          riskScore: Number(report.riskScore),
-          timestamp: Number(report.timestamp),
-          auditor: report.auditor,
-          isVerified: report.isVerified
-        }))
-  
-      } catch (err) {
-        console.error('Error getting reports:', err)
-        error.value = err.message || 'Failed to fetch reports'
-        throw err
-      }
+      // Format the reports data
+      return reports.map(report => ({
+        contractAddress: report.contractAddress,
+        ipfsHash: report.ipfsHash,
+        riskScore: Number(report.riskScore),
+        timestamp: Number(report.timestamp),
+        auditor: report.auditor,
+        isVerified: report.isVerified
+      }))
+
+    } catch (err) {
+      console.error('Error getting reports:', err)
+      error.value = err.message || 'Failed to fetch reports'
+      throw err
     }
-  
-    async function getAuditorDetails(auditorAddress) {
-      error.value = ''
+  }
+
+  async function getAuditorDetails(auditorAddress) {
+    error.value = ''
+    
+    try {
+      const contract = await getContract()
+      const details = await contract.getAuditorDetails(auditorAddress || address.value)
       
-      try {
-        const contract = await getContract()
-        const details = await contract.getAuditorDetails(auditorAddress || address.value)
-        
-        return {
-          isActive: details.isActive,
-          reportsSubmitted: Number(details.reportsSubmitted),
-          reputation: Number(details.reputation)
-        }
-      } catch (err) {
-        console.error('Error getting auditor details:', err)
-        error.value = err.message || 'Failed to fetch auditor details'
-        throw err
+      return {
+        isActive: details.isActive,
+        reportsSubmitted: Number(details.reportsSubmitted),
+        reputation: Number(details.reputation)
       }
+    } catch (err) {
+      console.error('Error getting auditor details:', err)
+      error.value = err.message || 'Failed to fetch auditor details'
+      throw err
     }
-  
-    async function verifyReport(contractAddress, reportIndex) {
-      isLoading.value = true
-      error.value = ''
-      txHash.value = ''
-  
-      try {
-        const contract = await getContract()
-        
-        // Estimate gas
-        const gasEstimate = await contract.verifyReport.estimateGas(
-          contractAddress,
-          reportIndex
-        )
-        const gasLimit = gasEstimate.mul(120).div(100)
-        
-        const tx = await contract.verifyReport(
-          contractAddress,
-          reportIndex,
-          { gasLimit }
-        )
-        
-        txHash.value = tx.hash
-        const receipt = await tx.wait()
-        
-        return {
-          success: true,
-          receipt
-        }
-  
-      } catch (err) {
-        console.error('Error verifying report:', err)
-        error.value = err.message || 'Failed to verify report'
-        throw err
-      } finally {
-        isLoading.value = false
+  }
+
+  async function verifyReport(contractAddress, reportIndex) {
+    isLoading.value = true
+    error.value = ''
+    txHash.value = ''
+
+    try {
+      const contract = await getContract()
+      
+      // Estimate gas
+      const gasEstimate = await contract.verifyReport.estimateGas(
+        contractAddress,
+        reportIndex
+      )
+      const gasLimit = gasEstimate.mul(120).div(100)
+      
+      const tx = await contract.verifyReport(
+        contractAddress,
+        reportIndex,
+        { gasLimit }
+      )
+      
+      txHash.value = tx.hash
+      const receipt = await tx.wait()
+      
+      return {
+        success: true,
+        receipt
       }
+
+    } catch (err) {
+      console.error('Error verifying report:', err)
+      error.value = err.message || 'Failed to verify report'
+      throw err
+    } finally {
+      isLoading.value = false
     }
-  
-    // For owner functions
-    async function addAuditor(auditorAddress) {
-      isLoading.value = true
-      error.value = ''
-      txHash.value = ''
-  
-      try {
-        const contract = await getContract()
-        const tx = await contract.addAuditor(auditorAddress)
-        txHash.value = tx.hash
-        await tx.wait()
-        return true
-      } catch (err) {
-        console.error('Error adding auditor:', err)
-        error.value = err.message || 'Failed to add auditor'
-        throw err
-      } finally {
-        isLoading.value = false
-      }
+  }
+
+  async function addAuditor(auditorAddress) {
+    isLoading.value = true
+    error.value = ''
+    txHash.value = ''
+
+    try {
+      const contract = await getContract()
+      const tx = await contract.addAuditor(auditorAddress)
+      txHash.value = tx.hash
+      await tx.wait()
+      return true
+    } catch (err) {
+      console.error('Error adding auditor:', err)
+      error.value = err.message || 'Failed to add auditor'
+      throw err
+    } finally {
+      isLoading.value = false
     }
-  
-    async function updateAuditorReputation(auditorAddress, newReputation) {
-      isLoading.value = true
-      error.value = ''
-      txHash.value = ''
-  
-      try {
-        const contract = await getContract()
-        const tx = await contract.updateAuditorReputation(auditorAddress, newReputation)
-        txHash.value = tx.hash
-        await tx.wait()
-        return true
-      } catch (err) {
-        console.error('Error updating reputation:', err)
-        error.value = err.message || 'Failed to update reputation'
-        throw err
-      } finally {
-        isLoading.value = false
-      }
+  }
+
+  async function updateAuditorReputation(auditorAddress, newReputation) {
+    isLoading.value = true
+    error.value = ''
+    txHash.value = ''
+
+    try {
+      const contract = await getContract()
+      const tx = await contract.updateAuditorReputation(auditorAddress, newReputation)
+      txHash.value = tx.hash
+      await tx.wait()
+      return true
+    } catch (err) {
+      console.error('Error updating reputation:', err)
+      error.value = err.message || 'Failed to update reputation'
+      throw err
+    } finally {
+      isLoading.value = false
     }
-  
-    return {
-      submitReport,
-      getReports,
-      getAuditorDetails,
-      verifyReport,
-      addAuditor,
-      updateAuditorReputation,
-      isLoading,
-      error,
-      txHash
-    }
+  }
+
+  return {
+    submitReport,
+    getReports,
+    getAuditorDetails,
+    verifyReport,
+    addAuditor,
+    updateAuditorReputation,
+    isLoading,
+    error,
+    txHash
+  }
 }

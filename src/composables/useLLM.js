@@ -4,117 +4,137 @@ import axios from 'axios'
 export function useLLM() {
   const isLoading = ref(false)
   const error = ref(null)
-  const analysisStream = ref('')
 
-  const API_URL = 'https://llama.us.gaianet.ai/v1/chat/completions'
-  const API_KEY = ''
+  const API_URL = 'https://llama.us.gaianet.network/v1/chat/completions'
 
   const axiosInstance = axios.create({
     baseURL: API_URL,
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
     }
   })
 
+  // Helper to extract key points from analysis
+  function extractKeyPoints(text) {
+    console.log('Raw LLM Response:', text)
+    
+    const lines = text.split(/[\n•-]/).filter(line => line.trim())
+    const issues = []
+    const suggestions = []
+    let maxSeverityScore = 0
+    
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+
+      // Look for severity scores (e.g., "Severity: 80/100")
+      const severityMatch = trimmed.match(/severity:?\s*(\d+)(?:\s*\/\s*100)?/i)
+      if (severityMatch) {
+        const score = parseInt(severityMatch[1])
+        if (!isNaN(score) && score > maxSeverityScore) {
+          maxSeverityScore = score
+        }
+      }
+      
+      // Determine severity level from explicit mentions
+      let severity = 'medium'
+      if (trimmed.toLowerCase().includes('severity: critical')) severity = 'critical'
+      else if (trimmed.toLowerCase().includes('severity: high')) severity = 'high'
+      else if (trimmed.toLowerCase().includes('severity: low')) severity = 'low'
+      
+      // Check if line describes an issue
+      if (trimmed.toLowerCase().includes('vulnerable') || 
+          trimmed.toLowerCase().includes('risk') ||
+          trimmed.toLowerCase().includes('issue') ||
+          trimmed.toLowerCase().includes('problem') ||
+          trimmed.toLowerCase().includes('severity')) {
+        issues.push({
+          severity,
+          title: trimmed.split('.')[0],
+          description: trimmed
+        })
+      }
+      // Check if line is a suggestion
+      else if (trimmed.toLowerCase().includes('recommend') ||
+               trimmed.toLowerCase().includes('should') ||
+               trimmed.toLowerCase().includes('consider') ||
+               trimmed.toLowerCase().includes('improvement')) {
+        suggestions.push({
+          title: 'Improvement Suggestion',
+          description: trimmed
+        })
+      }
+    }
+
+    // If no issues found but text mentions it explicitly
+    if (issues.length === 0 && text.toLowerCase().includes('no security issues found')) {
+      return {
+        issues: [{
+          severity: 'low',
+          title: 'No Security Issues',
+          description: 'Code analysis found no significant security vulnerabilities.'
+        }],
+        suggestions: suggestions.length ? suggestions : [{
+          title: 'General Recommendation',
+          description: 'While no issues were found, consider regular security reviews and testing.'
+        }],
+        riskScore: 10 // Low risk score for no issues
+      }
+    }
+
+    return { 
+      issues, 
+      suggestions,
+      riskScore: maxSeverityScore || (issues.some(i => i.severity === 'critical') ? 90 :
+                                     issues.some(i => i.severity === 'high') ? 70 :
+                                     issues.some(i => i.severity === 'medium') ? 50 : 30)
+    }
+  }
+
   async function analyzeContract(code) {
+    if (!code?.trim()) {
+      throw new Error('No code provided')
+    }
+
     isLoading.value = true
     error.value = null
-    analysisStream.value = ''
 
     try {
-      const response = await axiosInstance({
-        method: 'post',
-        url: '',
-        data: {
-          model: 'YOUR_MODEL_NAME', // e.g., gpt-4
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert smart contract auditor. Analyze the following smart contract code and provide a detailed security analysis in the following JSON format:
-{
-  "riskScore": <number between 0-100>,
-  "issues": [
-    {
-      "severity": "<critical|high|medium|low>",
-      "title": "<issue title>",
-      "description": "<detailed description>",
-      "codeSnippet": "<relevant code or fix suggestion>"
-    }
-  ],
-  "suggestions": [
-    {
-      "title": "<suggestion title>",
-      "description": "<detailed suggestion>"
-    }
-  ]
-}
-Focus on:
-1. Security vulnerabilities
-2. Gas optimization
-3. Code quality and best practices
-4. Potential attack vectors
-Ensure the response is valid JSON.`
-            },
-            {
-              role: "user",
-              content: code
-            }
-          ],
-          temperature: 0.3,
-          stream: true
-        },
-        responseType: 'stream',
-        onDownloadProgress: (progressEvent) => {
-          try {
-            const lines = progressEvent.event.target.response.split('\n')
-            let jsonResponse = ''
-            
-            for (const line of lines) {
-              if (line.trim() === '') continue
-              if (line.includes('[DONE]')) break
+      const response = await axiosInstance.post('', {
+        model: 'llama',
+        messages: [
+          {
+            role: "system",
+            content: `You are a smart contract security auditor. Analyze the submitted contract and identify all security vulnerabilities directly, without explaining the contract's general functionality. For each issue found, follow this structure:
 
-              const message = line.replace(/^data: /, '').trim()
-              if (message === '') continue
+Severity Level: Label the severity as Critical, High, Medium, or Low.
+Severity Score (0-100): Assign a severity score based on the risk level.
+Issue Summary: Describe the issue in one sentence, focusing on what's wrong or risky.
+Recommended Fix: Provide a clear, actionable recommendation in one sentence.
 
-              try {
-                const parsed = JSON.parse(message)
-                if (parsed.choices[0].delta.content) {
-                  jsonResponse += parsed.choices[0].delta.content
-                  analysisStream.value = jsonResponse
-                }
-              } catch (e) {
-                console.warn('Error parsing streaming message:', e)
-              }
-            }
-          } catch (err) {
-            console.error('Error processing stream:', err)
+If no issues are found, state 'No security issues found' and provide an overall security score based on code quality, best practices, and potential vulnerabilities (0-100). Avoid any general descriptions of the contract and focus solely on security issues and actionable insights.`
+          },
+          {
+            role: "user",
+            content: code
           }
-        }
+        ],
+        temperature: 0.3,
+        max_tokens: 1000
       })
 
-      // Process the complete response
-      const finalResult = JSON.parse(analysisStream.value)
-      
-      // Validate and format the response
-      return {
-        riskScore: Number(finalResult.riskScore) || 50,
-        issues: finalResult.issues?.map(issue => ({
-          severity: issue.severity?.toLowerCase() || 'medium',
-          title: issue.title || 'Unknown Issue',
-          description: issue.description || '',
-          codeSnippet: issue.codeSnippet || ''
-        })) || [],
-        suggestions: finalResult.suggestions?.map(suggestion => ({
-          title: suggestion.title || 'Unknown Suggestion',
-          description: suggestion.description || ''
-        })) || []
+      if (!response.data?.choices?.[0]?.message?.content) {
+        throw new Error('Invalid API response')
       }
 
+      const analysisText = response.data.choices[0].message.content
+      return extractKeyPoints(analysisText)
+
     } catch (err) {
-      error.value = err
-      console.error('Error in LLM analysis:', err)
-      throw err
+      console.error('Full API Error:', err)
+      error.value = err.message
+      throw new Error('Analysis failed: ' + (err.response?.data?.error || err.message))
     } finally {
       isLoading.value = false
     }
@@ -123,7 +143,6 @@ Ensure the response is valid JSON.`
   return {
     analyzeContract,
     isLoading,
-    error,
-    analysisStream
+    error
   }
 }

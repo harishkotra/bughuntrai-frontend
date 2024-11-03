@@ -16,14 +16,48 @@
         </div>
       </div>
 
-      <!-- Contract Import Section -->
       <div class="bg-gray-800 rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Import Contract</h2>
+        <div class="flex items-start space-x-4">
+          <div class="flex-shrink-0 mt-1">
+            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold mb-2">Analyzing Options</h3>
+            <div class="space-y-4 text-gray-300">
+              <div>
+                <h4 class="font-medium text-blue-400">Option 1: Import Verified Contract</h4>
+                <p class="mt-1 text-sm">
+                  Use the contract import feature below to analyze verified contracts on AIA Chain. Simply enter the contract address 
+                  and the tool will fetch the verified source code automatically.
+                </p>
+              </div>
+              
+              <div>
+                <h4 class="font-medium text-blue-400">Option 2: Direct Code Analysis</h4>
+                <p class="mt-1 text-sm">
+                  For contracts not verified on AIA Chain or contracts under development, you can paste your smart contract code 
+                  directly into the text area below for analysis.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import Contract Section with modified title -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-semibold">Import Verified Contracts</h2>
+          <span class="text-xs text-gray-400 px-2 py-1 bg-gray-700 rounded">Supports AIA Chain Only</span>
+        </div>
+        
         <div class="flex gap-4 mb-6">
           <input
             type="text"
             v-model="contractAddress"
-            placeholder="Enter contract address (0x...)"
+            placeholder="Enter verified contract address (0x...)"
             class="flex-1 p-2 bg-gray-900 rounded-lg border border-gray-700 text-white font-mono"
           />
           <button
@@ -63,6 +97,23 @@
               class="w-full h-64 p-4 bg-gray-900 rounded-lg border border-gray-700 text-white font-mono"
             ></textarea>
           </div>
+          <div class="space-y-4 mb-3 text-gray-300">
+            <div class="mt-4 bg-gray-900/50 rounded-lg p-4">
+              <div class="flex items-start space-x-2">
+                <div class="flex-shrink-0">
+                  <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div class="text-sm text-gray-400">
+                  <p>Currently using <span class="text-yellow-500 font-mono">Llama 3.1 8B</span> model for analysis. 
+                  More powerful models will be integrated in future updates to enhance analysis capabilities.<br /> <br />
+                  <strong>Note:</strong> Analysis results are for reference only and should not be considered as a complete security audit.
+                  Always perform thorough testing and professional audits before deploying contracts to production.</p>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="flex space-x-4">
             <button
               @click="handleAnalyzeContract"
@@ -86,7 +137,16 @@
             </button>
           </div>
         </div>
-  
+        <div v-if="isAnalyzing" class="bg-gray-800 rounded-lg p-6">
+          <div class="flex items-center justify-center space-x-3">
+            <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-gray-300">Analyzing contract security...</span>
+          </div>
+        </div>
+
         <!-- Streaming Response (Debug) -->
         <div v-if="streamingResult && isAnalyzing" class="bg-gray-800 rounded-lg p-6">
           <div class="flex items-center justify-between mb-4">
@@ -166,21 +226,6 @@
           </div>
         </div>
   
-        <!-- Optimization Suggestions -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-4">Optimization Suggestions</h3>
-          <div class="space-y-4">
-            <div
-              v-for="(suggestion, index) in analysisResult.suggestions"
-              :key="index"
-              class="p-4 bg-gray-700 rounded-lg"
-            >
-              <h4 class="font-medium text-blue-400">{{ suggestion.title }}</h4>
-              <p class="text-gray-300 mt-1">{{ suggestion.description }}</p>
-            </div>
-          </div>
-        </div>
-  
         <!-- Submit Report Section -->
         <div class="bg-gray-800 rounded-lg p-6">
           <div class="flex items-center justify-between mb-4">
@@ -248,16 +293,16 @@ const isAnalyzing = ref(false)
 const isSubmitting = ref(false)
 const isImporting = ref(false)
 const importError = ref('')
+const analysisError = ref('')
 const analysisResult = ref(null)
 const txHash = ref('')
 const txPending = ref(false)
 const streamingResult = ref('')
-const serviceAvailable = ref(true)
 
 // Get composables
 const { isConnected, isCorrectChain } = useWallet()
 const { submitReport: submitContractReport } = useContract()
-const { analyzeContract: llmAnalyze, error: llmError, analysisStream, checkAvailability } = useLLM()
+const { analyzeContract: llmAnalyze, error: llmError, analysisStream } = useLLM()
 
 // Computed properties
 const isValidAddress = computed(() => {
@@ -282,21 +327,11 @@ const getSubmitButtonText = computed(() => {
   return 'Submit Report'
 })
 
-// Check service availability on mount
-onMounted(async () => {
-  serviceAvailable.value = await checkAvailability()
-})
-// Watch the streaming response
-watch(analysisStream, (newValue) => {
-  streamingResult.value = newValue
-  try {
-    // Try to parse the streaming response as it comes in
-    const parsed = JSON.parse(newValue)
-    if (parsed.riskScore !== undefined && Array.isArray(parsed.issues) && Array.isArray(parsed.suggestions)) {
-      analysisResult.value = parsed
-    }
-  } catch (e) {
-    // Ignore parsing errors during streaming
+// Watch for LLM errors
+watch(llmError, (newError) => {
+  if (newError) {
+    analysisError.value = newError
+    isAnalyzing.value = false
   }
 })
 
@@ -317,15 +352,12 @@ async function handleImportContract() {
     const contractData = response.data
     
     if (contractData.source_code) {
-      // Start with the main source code
       let fullCode = contractData.source_code
       
-      // Add compiler version if available
       if (contractData.compiler_version) {
         fullCode = `// Compiler: ${contractData.compiler_version}\n${fullCode}`
       }
       
-      // Add additional sources if they exist
       if (contractData.additional_sources?.length) {
         fullCode += '\n\n// Additional Source Files:\n'
         contractData.additional_sources.forEach(source => {
@@ -334,6 +366,8 @@ async function handleImportContract() {
       }
       
       contractCode.value = fullCode
+      analysisResult.value = null // Clear previous results
+      analysisError.value = '' // Clear any previous errors
     } else {
       throw new Error('Contract source code not available. The contract may not be verified.')
     }
@@ -347,14 +381,9 @@ async function handleImportContract() {
 
 async function handleAnalyzeContract() {
   if (!contractCode.value.trim()) return
-  if (!serviceAvailable.value) {
-    console.error('LLM service is not available')
-    await performBasicAnalysis()
-    return
-  }
   
   isAnalyzing.value = true
-  streamingResult.value = ''
+  analysisError.value = ''
   analysisResult.value = null
   
   try {
@@ -362,25 +391,24 @@ async function handleAnalyzeContract() {
     analysisResult.value = result
   } catch (error) {
     console.error('Error analyzing contract:', error)
-    await performBasicAnalysis()
+    analysisError.value = error.message
   } finally {
     isAnalyzing.value = false
   }
 }
 
-// Fallback analysis in case LLM fails
 async function performBasicAnalysis() {
   const code = contractCode.value.toLowerCase()
   const issues = []
   let riskScore = 0
   
-  // Basic checks
+  // Basic security checks
   if (code.includes('call') && !code.includes('reentrancyguard')) {
     issues.push({
       severity: 'critical',
       title: 'Potential Reentrancy Vulnerability',
       description: 'The contract uses low-level call without ReentrancyGuard protection',
-      codeSnippet: 'Use OpenZeppelin\'s ReentrancyGuard or implement checks-effects-interactions pattern'
+      suggestion: 'Use OpenZeppelin\'s ReentrancyGuard or implement checks-effects-interactions pattern'
     })
     riskScore += 30
   }
@@ -389,8 +417,8 @@ async function performBasicAnalysis() {
     issues.push({
       severity: 'high',
       title: 'Unchecked Return Values',
-      description: 'Transfer/send return values are not checked. Failed transfers could go unnoticed.',
-      codeSnippet: 'Use SafeERC20 or check return values with require statements'
+      description: 'Transfer/send return values are not checked',
+      suggestion: 'Use SafeERC20 or check return values with require statements'
     })
     riskScore += 20
   }
@@ -400,36 +428,36 @@ async function performBasicAnalysis() {
     issues,
     suggestions: [
       {
-        title: 'Use OpenZeppelin Contracts',
-        description: 'Consider using battle-tested OpenZeppelin contracts for common functionality.'
-      },
-      {
-        title: 'Implement Access Control',
-        description: 'Use Role-Based Access Control (RBAC) for better permission management.'
+        title: 'Fallback Analysis',
+        description: 'This is a basic analysis due to AI service unavailability. Consider retrying later for detailed analysis.'
       }
     ]
   }
 }
 
 async function handleSubmitReport() {
-  if (!analysisResult.value) return
+  if (!analysisResult.value || !isConnected.value || !isCorrectChain.value) return
 
   isSubmitting.value = true
   txPending.value = true
+  
   try {
     const result = await submitContractReport({
-      contractAddress: ethers.ZeroAddress,
-      riskScore: analysisResult.value.riskScore,
+      contractAddress: contractAddress.value || ethers.ZeroAddress,
+      riskScore: Math.floor(analysisResult.value.riskScore),
       issues: analysisResult.value.issues,
-      suggestions: analysisResult.value.suggestions
     })
     
-    txHash.value = result.hash
-    await result.wait()
-    txPending.value = false
+    if (result?.hash) {
+      txHash.value = result.hash
+      await result.wait()
+      txPending.value = false
+    }
     
   } catch (error) {
     console.error('Error submitting report:', error)
+    // Show error to user (you might want to add an error display in the template)
+    alert(`Failed to submit report: ${error.message}`)
   } finally {
     isSubmitting.value = false
   }
@@ -439,6 +467,7 @@ function handleClearAnalysis() {
   contractCode.value = ''
   contractAddress.value = ''
   analysisResult.value = null
+  analysisError.value = ''
   txHash.value = ''
   txPending.value = false
   streamingResult.value = ''
